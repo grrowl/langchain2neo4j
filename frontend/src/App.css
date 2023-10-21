@@ -6,6 +6,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #4b0082;
+  min-height: 100vh;
 }
 
 .App {
@@ -40,8 +41,10 @@ body {
   border-radius: 10px;
   padding: 5px 10px;
   margin-bottom: 5px;
-  max-width: 75%; /* Set a maximum width */
-  word-wrap: break-word; /* Enable word wrapping */
+  max-width: 75%;
+  /* Set a maximum width */
+  word-wrap: break-word;
+  /* Enable word wrapping */
 }
 
 .message-user {
@@ -51,8 +54,10 @@ body {
   border-radius: 10px;
   padding: 5px 10px;
   margin-bottom: 5px;
-  max-width: 75%; /* Set a maximum width */
-  word-wrap: break-word; /* Enable word wrapping */
+  max-width: 75%;
+  /* Set a maximum width */
+  word-wrap: break-word;
+  /* Enable word wrapping */
 }
 
 .message-bot-container,

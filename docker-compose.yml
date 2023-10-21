@@ -8,10 +8,10 @@ services:
     container_name: frontend
     ports:
       - 3000:3000
-    depends_on:
-      - backend
-    links:
-      - backend
+    # depends_on:
+    #   - backend
+    # links:
+    #   - backend
   backend:
     build:
       context: backend/.
@@ -22,4 +22,16 @@ services:
       - 7860:7860
     env_file:
       - .env
-    
+  db:
+    image: neo4j:5.9.0
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    # volumes:
+      # - ./db/data:/data
+      # - ./db/plugins:/plugins
+    environment:
+      - NEO4J_AUTH=neo4j/qIMGcIjRWv9yuM
+      - NEO4J_apoc_import_file_use__neo4j__config=true
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*

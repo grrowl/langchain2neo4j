@@ -34,6 +34,7 @@ def get_result_and_thought_using_graph(
             logger.info(thought)
 
     except Exception as exc:
-        raise ValueError(f"Error: {str(exc)}") from exc
+        raise exc
+        # raise ValueError(f"Error: {str(exc)}") from exc
 
     return {"response": output["output"], "thought": thought}
