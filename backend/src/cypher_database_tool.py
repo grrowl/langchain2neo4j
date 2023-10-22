@@ -14,7 +14,6 @@ from typing import Dict, List, Any
 
 from logger import logger
 
-
 examples = """
 # Who played in Top Gun?
 MATCH (m:Movie)<-[r:ACTED_IN]-(a)
@@ -34,6 +33,20 @@ MATCH (m:Movie)-[:IN_GENRE]->(:Genre {{name:"Comedy"}})
 RETURN {{movie:m.title}} AS result
 ORDER BY m.imdbRating DESC LIMIT 5
 """
+
+# examples = """
+# // Find users who are looking for a mid-century table
+# MATCH (u:User)-[r:LOOKING_FOR]->(i:Item {{type: "Table", style: "Mid-Century"}})
+# RETURN {{seeker: u.name, item: i.description}} AS result
+
+# // Find users wanting to attend a specific gig tonight
+# MATCH (u:User)-[r:INTERESTED_IN]->(e:Event {{name: "Gig", date: date()}})
+# RETURN {{attendee: u.name, event: e.name}} AS result
+
+# // Find potential housemates looking for a shared house with specific parameters
+# MATCH (u:User)-[r:LOOKING_FOR]->(i:Item {{type: "Shared House", petsAllowed: true}})
+# RETURN {{housemate: u.name, item: i.description}} AS result
+# """
 
 
 SYSTEM_TEMPLATE = (
@@ -119,7 +132,7 @@ if __name__ == "__main__":
 
     llm = ChatOpenAI(temperature=0.3)
     database = Neo4jDatabase(
-        host="bolt://3.83.107.240:7687",
+        host="bolt://localhost:7687",
         user="neo4j",
         password="promotion-impulse-supervisor",
     )

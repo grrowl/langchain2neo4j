@@ -8,7 +8,12 @@
       "name": "Python",
       "type": "python",
       "request": "launch",
-      "program": "main.py",
+      // "program": "main.py",
+      "module": "poetry",
+      "args": [
+        "run", "python", "main.py"
+      ],
+      // "envFile": "${workspaceFolder}/.env",
       "cwd": "${workspaceFolder}/backend/src",
       "console": "integratedTerminal",
       "justMyCode": true

@@ -8,24 +8,13 @@ from typing import Any, Dict, List
 from pydantic import Field
 from logger import logger
 
+from langchain.vectorstores import Neo4jVector
 
-vector_search = """
-WITH $embedding AS e
-MATCH (m:Movie)
-WHERE m.embedding IS NOT NULL AND size(m.embedding) = 1536
-WITH m, gds.similarity.cosine(m.embedding, e) AS similarity
-ORDER BY similarity DESC LIMIT 5
-CALL {
-  WITH m
-  MATCH (m)-[r:!RATED]->(target)
-  RETURN coalesce(m.name, m.title) + " " + type(r) + " " + coalesce(target.name, target.title) AS result
-  UNION
-  WITH m
-  MATCH (m)<-[r:!RATED]-(target)
-  RETURN coalesce(target.name, target.title) + " " + type(r) + " " + coalesce(m.name, m.title) AS result
-}
-RETURN result LIMIT 100
-"""
+import os
+
+url = os.environ.get("NEO4J_URL")
+username = os.environ.get("NEO4J_USER")
+password = os.environ.get("NEO4J_PASS")
 
 
 class LLMNeo4jVectorChain(Chain):
@@ -55,28 +44,50 @@ class LLMNeo4jVectorChain(Chain):
         """Embed a question and do vector search."""
         question = inputs[self.input_key]
         logger.debug(f"Vector search input: {question}")
-        embedding = self.embeddings.embed_query(question)
-        self.callback_manager.on_text(
-            "Vector search embeddings:", end="\n", verbose=self.verbose
+
+        vector_search = Neo4jVector.from_existing_graph(
+            embedding=self.embeddings,
+            url=url,
+            username=username,
+            password=password,
+            index_name="index",
+            node_label="Movie",
+            text_node_properties=["title", "tagline"],
+            embedding_node_property="embedding",
+            search_type="hybrid",  # optional, maybe better?
         )
-        self.callback_manager.on_text(
-            embedding[:5], color="green", end="\n", verbose=self.verbose
-        )
-        context = self.graph.query(
-            vector_search, {'embedding': embedding})
+        # RetrievalQA.from_chain_type(
+        #     llm=llm, chain_type="stuff", retriever=vector_search.as_retriever()
+        # )
+
+        retriever = vector_search.as_retriever()
+        context = retriever.invoke(question)  # it will vectorise for us
+
+        # embedding = self.embeddings.embed_query(question)
+
+        # self.callback_manager.on_text(
+        #     "Vector search embeddings:", end="\n", verbose=self.verbose
+        # )
+        # self.callback_manager.on_text(
+        #     embedding[:5], color="green", end="\n", verbose=self.verbose
+        # )
+        # we do have access to the underlying graph here self.graph
+
+        # context = self.graph.query(vector_search, {"embedding": embedding})
         return {self.output_key: context}
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from langchain.chat_models import ChatOpenAI
 
     llm = ChatOpenAI(temperature=0.0)
-    database = Neo4jDatabase(host="bolt://100.27.33.83:7687",
-                             user="neo4j", password="room-loans-transmissions")
+    database = Neo4jDatabase(
+        host="bolt://100.27.33.83:7687",
+        user="neo4j",
+        password="room-loans-transmissions",
+    )
     chain = LLMNeo4jVectorChain(llm=llm, verbose=True, graph=database)
 
-    output = chain.run(
-        "What type of movie is Grumpier?"
-    )
+    output = chain.run("What type of movie is Grumpier?")
 
     print(output)

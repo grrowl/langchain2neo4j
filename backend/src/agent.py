@@ -6,9 +6,13 @@ from langchain.memory import ConversationBufferMemory, ReadOnlySharedMemory
 from langchain.agents import initialize_agent
 from langchain.agents import AgentType
 
+import os
+
 from cypher_database_tool import LLMCypherGraphChain
-from keyword_neo4j_tool import LLMKeywordGraphChain
-from vector_neo4j_tool import LLMNeo4jVectorChain
+
+# from keyword_neo4j_tool import LLMKeywordGraphChain
+# from vector_neo4j_tool import LLMNeo4jVectorChain
+from graph import get_retriver, get_qa_chain
 
 
 class MovieAgent(AgentExecutor):
@@ -19,7 +23,7 @@ class MovieAgent(AgentExecutor):
         return "MovieAgent"
 
     @classmethod
-    def initialize(cls, movie_graph, model_name, *args, **kwargs):
+    def initialize(cls, graph, model_name, *args, **kwargs):
         if model_name in ["gpt-3.5-turbo", "gpt-4"]:
             llm = ChatOpenAI(temperature=0, model_name=model_name)
         else:
@@ -31,18 +35,26 @@ class MovieAgent(AgentExecutor):
         readonlymemory = ReadOnlySharedMemory(memory=memory)
 
         cypher_tool = LLMCypherGraphChain(
-            llm=llm, graph=movie_graph, verbose=True, memory=readonlymemory
+            llm=llm, graph=graph, verbose=True, memory=readonlymemory
         )
-        fulltext_tool = LLMKeywordGraphChain(llm=llm, graph=movie_graph, verbose=True)
-        vector_tool = LLMNeo4jVectorChain(llm=llm, verbose=True, graph=movie_graph)
+        # fulltext_tool = LLMKeywordGraphChain(llm=llm, graph=graph, verbose=True)
+        # vector_tool = LLMNeo4jVectorChain(llm=llm, verbose=True, graph=graph)
+        retriever = get_retriver()
+        graph_chain = get_qa_chain(llm, retriever)
 
         # Load the tool configs that are needed.
         tools = [
             Tool(
-                name="Cypher search",
+                name="Exact search",
                 func=cypher_tool.run,
                 description="""
-                This is the primary tool for knowledge discovery. Input should be full question.""",
+                This is the primary tool for querying when exact matches are known. Input should be full question.""",
+            ),
+            Tool(
+                name="Update",
+                func=cypher_tool.run,
+                description="""
+                This is the primary tool for updating our knowledge graph. Input should be full question.""",
             ),
             # Tool(
             #     name="Keyword search",
@@ -51,10 +63,17 @@ class MovieAgent(AgentExecutor):
             #     Input should be a list of relevant movies inferred from the question.
             #     Remove stop word "The" from specified movie titles.""",
             # ),
+            # Tool(
+            #     name="Fuzzy search",
+            #     func=vector_tool.run,
+            #     description="This is the primary tool for searching. Input should be full question. Do not include agent instructions.",
+            # ),
             Tool(
-                name="Vector search",
-                func=vector_tool.run,
-                description="Utilize this tool when explicity told to use vector search.Input should be full question.Do not include agent instructions.",
+                name="Fuzzy search",
+                # func=vector_qa_chain.run,
+                func=graph_chain.run,
+                # coroutine=graph_chain.acall,  # if you want to use async
+                description="This is the primary tool for searching. Input should be full question. Do not include agent instructions.",
             ),
         ]
 

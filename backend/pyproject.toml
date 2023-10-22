@@ -1,14 +1,22 @@
 [tool.poetry]
-name = "langchain2neo4j"
-version = "0.1.0"
+name = "connect"
+version = "0.2.0"
 description = "Integrating Neo4j database into langchain ecosystem"
-authors = ["Ibis Prevedello <ibiscp@gmail.com>", "Tomaz Bratanic <bratanic.tomaz@gmail.com>"]
+authors = [
+  "Tom McKenzie <tom@chillidonut.com>",
+  "Ibis Prevedello <ibiscp@gmail.com>",
+  "Tomaz Bratanic <bratanic.tomaz@gmail.com>",
+]
 readme = "README.md"
+packages = [{ include = "main.py", from = "src" }]
+
+# [tool.poetry.scripts]
+# server = "main:create_app"
 
 [tool.poetry.dependencies]
 python = "^3.11"
 pandas = "^2.0.0"
-langchain = "^0.0.136"
+langchain = "^0.0.320"
 neo4j = "^5.7.0"
 fastapi = "^0.95.0"
 rich = "^13.3.3"
