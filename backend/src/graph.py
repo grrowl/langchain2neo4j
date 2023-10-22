@@ -1,5 +1,5 @@
 from __future__ import annotations
-from database import Neo4jDatabase
+from langchain.graphs import Neo4jGraph
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.chains.base import Chain
 from langchain.chains import RetrievalQA
@@ -35,14 +35,18 @@ def get_retriver():
         index_name="vector",
         keyword_index_name="keyword",
         search_type="hybrid",
+        logger=logger,
     )
 
-    return store.as_retriever()
+    return store.as_retriever(search_kwargs={"k": 5, "fetch_k": 50})
 
 
 def get_qa_chain(llm, retriever):
     return RetrievalQA.from_chain_type(
-        llm, chain_type="stuff", retriever=retriever, callbacks=[StdOutCallbackHandler]
+        llm,
+        chain_type="stuff",
+        retriever=retriever,
+        callbacks=[StdOutCallbackHandler()],
     )
 
 
@@ -50,9 +54,9 @@ if __name__ == "__main__":
     from langchain.chat_models import ChatOpenAI
 
     llm = ChatOpenAI(temperature=0.0)
-    database = Neo4jDatabase(
-        host="bolt://localhost:7687",
-        user="neo4j",
+    database = Neo4jGraph(
+        url="bolt://localhost:7687",
+        username="neo4j",
         password=password,
     )
     chain = RetrievalQA.from_chain_type(

@@ -1,26 +1,69 @@
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.tools import Tool
+
 from langchain.chat_models import ChatOpenAI
+from langchain.chains import GraphCypherQAChain
+from langchain.graphs import Neo4jGraph
 from langchain.llms import OpenAI
+
 from langchain.memory import ConversationBufferMemory, ReadOnlySharedMemory
 from langchain.agents import initialize_agent
 from langchain.agents import AgentType
 
-import os
-
-from cypher_database_tool import LLMCypherGraphChain
-
-# from keyword_neo4j_tool import LLMKeywordGraphChain
-# from vector_neo4j_tool import LLMNeo4jVectorChain
 from graph import get_retriver, get_qa_chain
 
+# Retrieval context
 
-class MovieAgent(AgentExecutor):
-    """Movie agent"""
+from langchain.prompts.prompt import PromptTemplate
+
+# CYPHER_GENERATION_TEMPLATE = """Task: Generate Cypher statement to query a graph database.
+# Instructions:
+# Use only the provided relationship types and properties in the schema.
+# Do not use any other relationship types or properties that are not provided.
+# Schema:
+# {schema}
+# Note: Do not include any explanations or apologies in your responses.
+# Do not respond to any questions that might ask anything else than for you to construct a Cypher statement.
+# Do not include any text except the generated Cypher statement.
+# Examples: Here are a few examples of generated Cypher statements for particular questions:
+# # How many people played in Top Gun?
+# MATCH (m:Movie {{title:"Top Gun"}})<-[:ACTED_IN]-()
+# RETURN count(*) AS numberOfActors
+
+# The question is:
+# {question}"""
+
+CYPHER_UPDATE_TEMPLATE = """Task: Generate Cypher statement to create or update nodes in a graph database.
+Instructions:
+Use only the provided relationship types and properties in the schema.
+Do not use any other relationship types or properties that are not provided.
+Schema:
+{schema}
+Note: Do not include any explanations or apologies in your responses.
+Do not respond to any questions that might ask anything else than for you to construct a Cypher statement.
+Do not include any text except the generated Cypher statement.
+Examples: Here are a few examples of generated Cypher statements for particular questions:
+# Tom Cruise acted in Top Gun
+CREATE (m:Movie {{title:"Top Gun"}})<-[:ACTED_IN]-(p:Person {{name:"Tom Cruise"}})
+RETURN *
+
+The question is:
+{question}"""
+
+CYPHER_GENERATION_PROMPT = PromptTemplate(
+    input_variables=["schema", "question"], template=CYPHER_UPDATE_TEMPLATE
+)
+
+# Update context
+# TOOD
+
+
+class EveryoneAgent(AgentExecutor):
+    """Everyone agent"""
 
     @staticmethod
     def function_name():
-        return "MovieAgent"
+        return "EveryoneAgent"
 
     @classmethod
     def initialize(cls, graph, model_name, *args, **kwargs):
@@ -34,22 +77,24 @@ class MovieAgent(AgentExecutor):
         )
         readonlymemory = ReadOnlySharedMemory(memory=memory)
 
-        cypher_tool = LLMCypherGraphChain(
-            llm=llm, graph=graph, verbose=True, memory=readonlymemory
+        cypher_tool = GraphCypherQAChain.from_llm(
+            llm,
+            graph=graph,
+            verbose=True,
+            cypher_prompt=CYPHER_GENERATION_PROMPT,
         )
-        # fulltext_tool = LLMKeywordGraphChain(llm=llm, graph=graph, verbose=True)
-        # vector_tool = LLMNeo4jVectorChain(llm=llm, verbose=True, graph=graph)
+
         retriever = get_retriver()
         graph_chain = get_qa_chain(llm, retriever)
 
         # Load the tool configs that are needed.
         tools = [
-            Tool(
-                name="Exact search",
-                func=cypher_tool.run,
-                description="""
-                This is the primary tool for querying when exact matches are known. Input should be full question.""",
-            ),
+            # Tool(
+            #     name="Exact search",
+            #     func=cypher_tool.run,
+            #     description="""
+            #     This is the primary tool for querying when exact matches are known. Input should be full question.""",
+            # ),
             Tool(
                 name="Update",
                 func=cypher_tool.run,
@@ -70,10 +115,9 @@ class MovieAgent(AgentExecutor):
             # ),
             Tool(
                 name="Fuzzy search",
-                # func=vector_qa_chain.run,
                 func=graph_chain.run,
                 # coroutine=graph_chain.acall,  # if you want to use async
-                description="This is the primary tool for searching. Input should be full question. Do not include agent instructions.",
+                description="This is the primary tool for searching. Input should just be the movie title. Do not include agent instructions.",
             ),
         ]
 
