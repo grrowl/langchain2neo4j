@@ -23,7 +23,7 @@ password = os.environ.get("NEO4J_PASS")
 # https://python.langchain.com/docs/integrations/vectorstores/neo4jvector
 
 
-def get_retriver():
+def get_retriever():
     store = Neo4jVector.from_existing_graph(
         embedding=OpenAIEmbeddings(),
         url=url,
@@ -60,7 +60,7 @@ if __name__ == "__main__":
         password=password,
     )
     chain = RetrievalQA.from_chain_type(
-        llm, chain_type="stuff", retriever=get_retriver()
+        llm, chain_type="stuff", retriever=get_retriever()
     )
     output = chain(
         {"question": "What did the president say about Justice Breyer"},
